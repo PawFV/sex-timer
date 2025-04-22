@@ -1,12 +1,9 @@
-<!-- @format -->
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <title>Timer Piola</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <!-- Tailwind CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
@@ -132,7 +129,7 @@
     </style>
   </head>
   <body class="min-h-screen flex items-center justify-center bg-gray-900 text-white font-sans overflow-hidden relative">
-    <!-- Fondo animado -->
+    <!-- -->
     <div
       class="fixed inset-0 bg-gradient-to-br from-pink-600/20 via-blue-500/20 to-pink-600/20 animate-gradient -z-10"
     ></div>
@@ -151,7 +148,7 @@
           @click="toggleTimer"
           class="px-6 py-3 text-lg rounded-full bg-white/10 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1"
         >
-          {{ isRunning ? '⏸️ Pause' : '▶️ Play' }}
+          {{ isRunning ? '⏸️ SexStop' : '▶️ Sex Start' }}
         </button>
         <button
           @click="reset"
@@ -168,7 +165,6 @@
         </button>
       </div>
 
-      <!-- Presets de tiempo -->
       <div class="flex flex-wrap gap-4 justify-center mb-8">
         <button
           v-for="preset in timePresets"
@@ -189,7 +185,6 @@
         </button>
       </div>
 
-      <!-- Selector de sonido -->
       <div class="border-t border-b border-white/10 py-6">
         <h3 class="text-sm opacity-70 mb-4">Sonido de Alarma</h3>
         <div class="flex gap-4 justify-center items-center">
@@ -220,6 +215,9 @@
           const targetMinutes = ref(60)
           const interval = ref(null)
           const selectedSound = ref('lechero')
+          const isExtraTime = ref(false)
+          const extraTimeTotal = 10 * 60 * 1000
+          const extraTimeElapsed = ref(0)
 
           const availableSounds = {
             lechero: {
@@ -249,6 +247,16 @@
 
           const formattedTime = computed(() => {
             if (elapsed.value >= targetMinutes.value * 60 * 1000) {
+              if (isExtraTime.value) {
+                const remaining = extraTimeTotal - extraTimeElapsed.value
+                if (remaining <= 0) {
+                  return 'SE ACABÓ EL TIEMPO EXTRA!'
+                }
+
+                const mins = Math.floor(remaining / 60000)
+                const secs = Math.floor((remaining % 60000) / 1000)
+                return `EXTRA: ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+              }
               return 'SI NO ACABASTE SE ACABA....'
             }
 
@@ -269,15 +277,34 @@
 
           const startTimer = () => {
             const startTime = Date.now() - elapsed.value
-            interval.value = setInterval(() => {
-              elapsed.value = Date.now() - startTime
+            const extraStartTime = Date.now() - extraTimeElapsed.value
 
-              if (elapsed.value >= targetMinutes.value * 60 * 1000 && !isMuted.value) {
-                const sound = availableSounds[selectedSound.value].audio
-                sound.currentTime = 0
-                sound.play().catch(() => {})
-                document.body.style.background = '#900'
-                clearInterval(interval.value)
+            interval.value = setInterval(() => {
+              if (isExtraTime.value) {
+                extraTimeElapsed.value = Date.now() - extraStartTime
+
+                if (extraTimeElapsed.value >= extraTimeTotal) {
+                  if (!isMuted.value) {
+                    const sound = availableSounds[selectedSound.value].audio
+                    sound.currentTime = 0
+                    sound.play().catch(() => {})
+                  }
+                  document.body.style.background = '#990000'
+                  clearInterval(interval.value)
+                }
+              } else {
+                elapsed.value = Date.now() - startTime
+
+                if (elapsed.value >= targetMinutes.value * 60 * 1000 && !isExtraTime.value) {
+                  isExtraTime.value = true
+                  document.body.style.background = '#994400'
+
+                  if (!isMuted.value) {
+                    const sound = availableSounds[selectedSound.value].audio
+                    sound.currentTime = 0
+                    sound.play().catch(() => {})
+                  }
+                }
               }
             }, 100)
           }
@@ -285,6 +312,8 @@
           const reset = () => {
             clearInterval(interval.value)
             elapsed.value = 0
+            extraTimeElapsed.value = 0
+            isExtraTime.value = false
             isRunning.value = false
             document.body.style.background = '#222'
           }
@@ -363,7 +392,9 @@
             selectedSound,
             availableSounds,
             testSelectedSound,
-            timePresets
+            timePresets,
+            isExtraTime,
+            extraTimeElapsed
           }
         }
       }).mount('#app')
