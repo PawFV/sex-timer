@@ -166,6 +166,14 @@
         >
           {{ isMuted ? '🔇 Muted' : '🔊 Sound' }}
         </button>
+        <!-- Botón de calendario siempre visible -->
+        <a
+          :href="calendarLink"
+          target="_blank"
+          class="px-3 sm:px-6 py-2 sm:py-3 text-base sm:text-lg rounded-full bg-gradient-to-r from-pink-500/30 to-purple-500/30 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1 flex items-center gap-2"
+        >
+          📅 Agendar
+        </a>
       </div>
 
       <div class="w-full max-w-md mx-auto py-6 mb-2">
@@ -407,6 +415,29 @@
             setTargetTime(mins)
           }
 
+          // Computed para el link del calendario
+          const calendarLink = computed(() => {
+            const nextWeek = new Date()
+            nextWeek.setDate(nextWeek.getDate() + 7)
+
+            const startTime = nextWeek.toISOString().replace(/-|:|\.\d\d\d/g, '')
+            const endTime = new Date(nextWeek.getTime() + targetMinutes.value * 60000)
+              .toISOString()
+              .replace(/-|:|\.\d\d\d/g, '')
+
+            const text = '💋 Sesión de ejercicio'
+            const details = `Duración programada: ${formatCustomTime(targetMinutes.value)}`
+
+            return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(
+              text
+            )}&details=${encodeURIComponent(details)}&dates=${startTime}/${endTime}`
+          })
+
+          // Timer finished computed
+          const timerFinished = computed(() => {
+            return elapsed.value > 0 && elapsed.value >= targetMinutes.value * 60 * 1000 && !isRunning.value
+          })
+
           onMounted(() => {
             requestWakeLock()
             document.addEventListener('visibilitychange', () => {
@@ -437,7 +468,9 @@
             extraTimeElapsed,
             customMinutes,
             formatCustomTime,
-            selectPreset
+            selectPreset,
+            timerFinished,
+            calendarLink
           }
         }
       }).mount('#app')
