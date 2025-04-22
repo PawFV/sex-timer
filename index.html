@@ -1,0 +1,372 @@
+<!-- @format -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Timer Piola</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            animation: {
+              'gradient': 'gradient 15s ease infinite'
+            },
+            keyframes: {
+              gradient: {
+                '0%, 100%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'left center'
+                },
+                '50%': {
+                  'background-size': '200% 200%',
+                  'background-position': 'right center'
+                }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #222;
+        color: #fff;
+        font-family: sans-serif;
+      }
+
+      #app {
+        text-align: center;
+      }
+
+      .display {
+        font-size: 200px;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        margin: 20px;
+      }
+
+      .controls,
+      .presets {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin: 10px;
+      }
+
+      button {
+        padding: 10px 20px;
+        font-size: 1.2rem;
+        border: none;
+        border-radius: 5px;
+        background: #444;
+        color: white;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      button:hover {
+        background: #666;
+        transform: scale(1.05);
+      }
+
+      .selected {
+        border: 2px solid #4caf50;
+      }
+
+      .muted {
+        text-decoration: line-through;
+        opacity: 0.7;
+      }
+
+      .test-sounds {
+        margin-top: 20px;
+        padding: 10px;
+        border-top: 1px solid #444;
+      }
+
+      .test-sounds h3 {
+        font-size: 1rem;
+        opacity: 0.7;
+        margin: 0 0 10px 0;
+      }
+
+      .audio-selector {
+        margin: 20px 0;
+        padding: 10px;
+        border-top: 1px solid #444;
+        border-bottom: 1px solid #444;
+      }
+
+      .audio-selector h3 {
+        font-size: 1rem;
+        opacity: 0.7;
+        margin: 0 0 10px 0;
+      }
+
+      select {
+        background: #444;
+        color: white;
+        padding: 8px 15px;
+        border: none;
+        border-radius: 5px;
+        font-size: 1rem;
+        cursor: pointer;
+        margin-bottom: 10px;
+      }
+
+      select:hover {
+        background: #555;
+      }
+
+      select option {
+        background: #333;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen flex items-center justify-center bg-gray-900 text-white font-sans overflow-hidden relative">
+    <!-- Fondo animado -->
+    <div
+      class="fixed inset-0 bg-gradient-to-br from-pink-600/20 via-blue-500/20 to-pink-600/20 animate-gradient -z-10"
+    ></div>
+
+    <div
+      id="app"
+      class="text-center bg-black/70 p-8 rounded-3xl backdrop-blur-lg shadow-lg shadow-pink-600/20 border border-white/10 w-[80vw] max-w-[1200px] min-h-[80vh] flex flex-col items-center justify-center"
+    >
+      <div
+        class="text-8xl md:text-[10rem] font-light bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent drop-shadow-lg mb-8 w-full overflow-hidden"
+        v-text="formattedTime"
+      ></div>
+
+      <div class="flex gap-4 justify-center mb-6">
+        <button
+          @click="toggleTimer"
+          class="px-6 py-3 text-lg rounded-full bg-white/10 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1"
+        >
+          {{ isRunning ? '⏸️ Pause' : '▶️ Play' }}
+        </button>
+        <button
+          @click="reset"
+          class="px-6 py-3 text-lg rounded-full bg-white/10 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1"
+        >
+          🔄 Reset
+        </button>
+        <button
+          @click="toggleSound"
+          :class="{'opacity-50 line-through': isMuted}"
+          class="px-6 py-3 text-lg rounded-full bg-white/10 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1"
+        >
+          {{ isMuted ? '🔇 Muted' : '🔊 Sound' }}
+        </button>
+      </div>
+
+      <!-- Presets de tiempo -->
+      <div class="flex flex-wrap gap-4 justify-center mb-8">
+        <button
+          v-for="preset in timePresets"
+          :key="preset.mins"
+          @click="setTargetTime(preset.mins)"
+          :title="preset.description"
+          :class="{
+            'bg-pink-600/30 border-pink-500/50 shadow-lg shadow-pink-600/20': targetMinutes === preset.mins,
+            'from-red-500/30 to-yellow-500/30': preset.mins === 10,
+            'from-orange-500/30 to-red-500/30': preset.mins === 30,
+            'from-green-500/30 to-blue-500/30': preset.mins === 60,
+            'from-blue-500/30 to-purple-500/30': preset.mins === 90,
+            'from-purple-500/30 to-pink-500/30': preset.mins === 120,
+          }"
+          class="px-6 py-3 text-lg rounded-full bg-gradient-to-r hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1 min-w-[120px] flex items-center justify-center gap-2"
+        >
+          {{ preset.icon }} {{ preset.label }}
+        </button>
+      </div>
+
+      <!-- Selector de sonido -->
+      <div class="border-t border-b border-white/10 py-6">
+        <h3 class="text-sm opacity-70 mb-4">Sonido de Alarma</h3>
+        <div class="flex gap-4 justify-center items-center">
+          <select
+            v-model="selectedSound"
+            class="px-4 py-2 rounded-lg bg-white/10 border border-white/10 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+          >
+            <option v-for="(sound, name) in availableSounds" :key="name" :value="name">{{ sound.label }}</option>
+          </select>
+          <button
+            @click="testSelectedSound"
+            class="px-6 py-2 rounded-lg bg-white/10 hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10"
+          >
+            🔊 Probar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { createApp, ref, computed, onMounted, onBeforeUnmount } = Vue
+
+      createApp({
+        setup() {
+          const isRunning = ref(false)
+          const isMuted = ref(false)
+          const elapsed = ref(0)
+          const targetMinutes = ref(60)
+          const interval = ref(null)
+          const selectedSound = ref('lechero')
+
+          const availableSounds = {
+            lechero: {
+              label: '🥛 El Lechero',
+              audio: new Audio('lechero.mp3')
+            },
+            finish: {
+              label: '🔔 Alarma Extra Time',
+              audio: new Audio('alert-extra-time.ogg')
+            },
+            daleChe: {
+              label: '🗣️ Dale Che',
+              audio: new Audio('dale_che.ogg')
+            }
+          }
+
+          let wakeLock = null
+          const requestWakeLock = async () => {
+            if ('wakeLock' in navigator) {
+              try {
+                wakeLock = await navigator.wakeLock.request('screen')
+              } catch (err) {
+                console.error('Wake Lock error:', err)
+              }
+            }
+          }
+
+          const formattedTime = computed(() => {
+            if (elapsed.value >= targetMinutes.value * 60 * 1000) {
+              return 'SI NO ACABASTE SE ACABA....'
+            }
+
+            const hrs = Math.floor(elapsed.value / 3600000)
+            const mins = Math.floor((elapsed.value % 3600000) / 60000)
+            const secs = Math.floor((elapsed.value % 60000) / 1000)
+            return `${String(hrs).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+          })
+
+          const toggleTimer = () => {
+            isRunning.value = !isRunning.value
+            if (isRunning.value) {
+              startTimer()
+            } else {
+              clearInterval(interval.value)
+            }
+          }
+
+          const startTimer = () => {
+            const startTime = Date.now() - elapsed.value
+            interval.value = setInterval(() => {
+              elapsed.value = Date.now() - startTime
+
+              if (elapsed.value >= targetMinutes.value * 60 * 1000 && !isMuted.value) {
+                const sound = availableSounds[selectedSound.value].audio
+                sound.currentTime = 0
+                sound.play().catch(() => {})
+                document.body.style.background = '#900'
+                clearInterval(interval.value)
+              }
+            }, 100)
+          }
+
+          const reset = () => {
+            clearInterval(interval.value)
+            elapsed.value = 0
+            isRunning.value = false
+            document.body.style.background = '#222'
+          }
+
+          const setTargetTime = mins => {
+            targetMinutes.value = mins
+          }
+
+          const toggleSound = () => {
+            isMuted.value = !isMuted.value
+          }
+
+          const testSelectedSound = () => {
+            if (!isMuted.value && selectedSound.value) {
+              const sound = availableSounds[selectedSound.value].audio
+              sound.currentTime = 0
+              sound.play().catch(() => {})
+            }
+          }
+
+          const timePresets = [
+            {
+              mins: 10,
+              label: '10min',
+              icon: '🚀',
+              description: 'Rapidito'
+            },
+            {
+              mins: 30,
+              label: '30min',
+              icon: '🔥',
+              description: 'Calentamiento'
+            },
+            {
+              mins: 60,
+              label: '1h',
+              icon: '💪',
+              description: 'Sesión Normal'
+            },
+            {
+              mins: 90,
+              label: '1h30',
+              icon: '🌋',
+              description: 'Intenso'
+            },
+            {
+              mins: 120,
+              label: '2h',
+              icon: '🐎',
+              description: 'Maratón'
+            }
+          ]
+
+          onMounted(() => {
+            requestWakeLock()
+            document.addEventListener('visibilitychange', () => {
+              if (document.visibilityState === 'visible') {
+                requestWakeLock()
+              }
+            })
+          })
+
+          onBeforeUnmount(() => {
+            clearInterval(interval.value)
+          })
+
+          return {
+            isRunning,
+            isMuted,
+            formattedTime,
+            targetMinutes,
+            toggleTimer,
+            reset,
+            setTargetTime,
+            toggleSound,
+            selectedSound,
+            availableSounds,
+            testSelectedSound,
+            timePresets
+          }
+        }
+      }).mount('#app')
+    </script>
+  </body>
+</html>
