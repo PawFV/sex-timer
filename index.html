@@ -165,24 +165,45 @@
         </button>
       </div>
 
-      <div class="flex flex-wrap gap-4 justify-center mb-8">
-        <button
-          v-for="preset in timePresets"
-          :key="preset.mins"
-          @click="setTargetTime(preset.mins)"
-          :title="preset.description"
-          :class="{
-            'bg-pink-600/30 border-pink-500/50 shadow-lg shadow-pink-600/20': targetMinutes === preset.mins,
-            'from-red-500/30 to-yellow-500/30': preset.mins === 10,
-            'from-orange-500/30 to-red-500/30': preset.mins === 30,
-            'from-green-500/30 to-blue-500/30': preset.mins === 60,
-            'from-blue-500/30 to-purple-500/30': preset.mins === 90,
-            'from-purple-500/30 to-pink-500/30': preset.mins === 120,
-          }"
-          class="px-6 py-3 text-lg rounded-full bg-gradient-to-r hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1 min-w-[120px] flex items-center justify-center gap-2"
-        >
-          {{ preset.icon }} {{ preset.label }}
-        </button>
+      <div class="w-full max-w-md mx-auto py-6 mb-2">
+        <div class="flex flex-col items-center gap-4">
+          <div class="w-full flex items-center gap-4">
+            <span class="text-sm">5min</span>
+            <input
+              type="range"
+              v-model="customMinutes"
+              min="5"
+              max="600"
+              step="5"
+              class="w-full h-3 bg-white/10 rounded-lg appearance-none cursor-pointer accent-pink-500"
+              @input="setTargetTime(customMinutes)"
+            />
+            <span class="text-sm">10h</span>
+          </div>
+
+          <div class="flex gap-4 flex-wrap justify-center">
+            <button
+              v-for="preset in timePresets"
+              :key="preset.mins"
+              @click="selectPreset(preset.mins)"
+              :class="{
+                'bg-pink-600/30 border-pink-500/50 shadow-lg shadow-pink-600/20': targetMinutes === preset.mins,
+                'from-red-500/30 to-yellow-500/30': preset.mins === 10,
+                'from-orange-500/30 to-red-500/30': preset.mins === 30,
+                'from-green-500/30 to-blue-500/30': preset.mins === 60,
+                'from-blue-500/30 to-purple-500/30': preset.mins === 90,
+                'from-purple-500/30 to-pink-500/30': preset.mins === 120,
+              }"
+              class="px-5 py-2 text-base rounded-full bg-gradient-to-r hover:bg-pink-600/30 transition-all duration-300 backdrop-blur-sm border border-white/10 hover:shadow-lg hover:shadow-pink-600/20 hover:-translate-y-1 flex items-center justify-center gap-2"
+            >
+              {{ preset.icon }} {{ preset.label }}
+            </button>
+          </div>
+
+          <div class="text-2xl font-light bg-gradient-to-r from-pink-500 to-blue-500 bg-clip-text text-transparent">
+            {{ formatCustomTime(customMinutes) }}
+          </div>
+        </div>
       </div>
 
       <div class="border-t border-b border-white/10 py-6">
@@ -218,6 +239,7 @@
           const isExtraTime = ref(false)
           const extraTimeTotal = 10 * 60 * 1000
           const extraTimeElapsed = ref(0)
+          const customMinutes = ref(60)
 
           const availableSounds = {
             lechero: {
@@ -367,6 +389,21 @@
             }
           ]
 
+          const formatCustomTime = mins => {
+            if (mins < 60) {
+              return `${mins}min`
+            } else {
+              const hours = Math.floor(mins / 60)
+              const remainingMins = mins % 60
+              return remainingMins > 0 ? `${hours}h ${remainingMins}min` : `${hours}h`
+            }
+          }
+
+          const selectPreset = mins => {
+            customMinutes.value = mins
+            setTargetTime(mins)
+          }
+
           onMounted(() => {
             requestWakeLock()
             document.addEventListener('visibilitychange', () => {
@@ -394,7 +431,10 @@
             testSelectedSound,
             timePresets,
             isExtraTime,
-            extraTimeElapsed
+            extraTimeElapsed,
+            customMinutes,
+            formatCustomTime,
+            selectPreset
           }
         }
       }).mount('#app')
